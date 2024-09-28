@@ -1,0 +1,25 @@
+{
+  "name": "classname-prefixer-js",
+  "version": "1.0.0",
+  "description": "Used to dynamically prefix the classNames",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hudali95/classname-prefixer-js.git"
+  },
+  "keywords": [
+    "webpack-loader",
+    "prefix",
+    "classname",
+    "react"
+  ],
+  "author": "Mahesh Hudali",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Hudali95/classname-prefixer-js/issues"
+  },
+  "homepage": "https://github.com/Hudali95/classname-prefixer-js#readme"
+}
