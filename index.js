@@ -7,7 +7,7 @@ const traverse = require('@babel/traverse').default;
 const generate = require('@babel/generator').default; // To generate the modified source
 const types = require('@babel/types'); // For AST manipulations
 
-const outputPath1 = path.resolve(__dirname, '..', 'output1.txt'); // Adjusted path to point to the root folder
+const outputPath1 = path.resolve(__dirname, '..', 'js-classnames.txt'); // Adjusted path to point to the root folder
 
 // Helper function to prefix class names
 function prefixClassName(value, prefix) {
@@ -17,10 +17,18 @@ function prefixClassName(value, prefix) {
         .join(' ');
 }
 
+// Helper function for logging modified values if debugging is enabled
+function logAlteration(original, updated, enableDebugging) {
+    if (enableDebugging) {
+        fs.appendFileSync(outputPath1, `Original: "${original}" => Updated: "${updated}"\n\n`);
+    }
+}
+
 function loader(source, inputSourceMap) {
     // Get the options passed from Webpack config
     const options = this.getOptions();
     const prefix = options.prefix || 'app'; // Default to 'app' if no prefix is provided
+    const enableDebugging = options.enableDebugging || false; // Debugging flag
 
     // Parse the source code into an AST
     const ast = parser.parse(source, {
@@ -46,20 +54,21 @@ function loader(source, inputSourceMap) {
                     const prefixedValue = prefixClassName(originalValue, prefix);
                     path.node.value = types.stringLiteral(prefixedValue);
 
-                    // Log the original and updated classNames to the output file
-                    fs.appendFileSync(outputPath1, `Original className="${originalValue}" => Updated className="${prefixedValue}"\n\n`);
+                    // Log the change
+                    logAlteration(originalValue, prefixedValue, enableDebugging);
                 }
                 // Handle JSX expressions (ternary, template literals, etc.)
                 else if (types.isJSXExpressionContainer(value)) {
                     let expression = path.get('value.expression');
 
+                    // Handle string literal inside the expression
                     if (types.isStringLiteral(expression.node)) {
                         const originalValue = expression.node.value; // Capture the original className
                         const prefixedValue = prefixClassName(originalValue, prefix);
                         expression.replaceWith(types.stringLiteral(prefixedValue));
 
-                        // Log the original and updated classNames to the output file
-                        fs.appendFileSync(outputPath1, `Original className={${originalValue}} => Updated className={${prefixedValue}}\n\n`);
+                        // Log the change
+                        logAlteration(originalValue, prefixedValue, enableDebugging);
                     }
                     // Handle ternary expressions (e.g., {condition ? 'class1' : 'class2'})
                     else if (types.isConditionalExpression(expression.node)) {
@@ -67,21 +76,21 @@ function loader(source, inputSourceMap) {
                         const alternate = expression.get('alternate');
 
                         if (types.isStringLiteral(consequent.node)) {
-                            const originalConsequent = consequent.node.value; // Capture the original className
+                            const originalConsequent = consequent.node.value;
                             const prefixedConsequent = prefixClassName(originalConsequent, prefix);
                             consequent.replaceWith(types.stringLiteral(prefixedConsequent));
 
-                            // Log the original and updated classNames
-                            fs.appendFileSync(outputPath1, `Original className={${originalConsequent}} => Updated className={${prefixedConsequent}}\n\n`);
+                            // Log the change
+                            logAlteration(originalConsequent, prefixedConsequent, enableDebugging);
                         }
 
                         if (types.isStringLiteral(alternate.node)) {
-                            const originalAlternate = alternate.node.value; // Capture the original className
+                            const originalAlternate = alternate.node.value;
                             const prefixedAlternate = prefixClassName(originalAlternate, prefix);
                             alternate.replaceWith(types.stringLiteral(prefixedAlternate));
 
-                            // Log the original and updated classNames
-                            fs.appendFileSync(outputPath1, `Original className={${originalAlternate}} => Updated className={${prefixedAlternate}}\n\n`);
+                            // Log the change
+                            logAlteration(originalAlternate, prefixedAlternate, enableDebugging);
                         }
                     }
                     // Handle template literals (e.g., `some-${variable}-class`)
@@ -91,13 +100,13 @@ function loader(source, inputSourceMap) {
 
                         // Handle each quasis part (static strings inside template literal)
                         quasis.forEach((element) => {
-                            const originalValue = element.node.value.raw; // Capture the original quasis
+                            const originalValue = element.node.value.raw;
                             const prefixedValue = prefixClassName(originalValue, prefix);
                             element.node.value.raw = prefixedValue;
                             element.node.value.cooked = prefixedValue;
 
-                            // Log the original and updated classNames
-                            fs.appendFileSync(outputPath1, `Original template literal part="${originalValue}" => Updated part="${prefixedValue}"\n\n`);
+                            // Log the change
+                            logAlteration(originalValue, prefixedValue, enableDebugging);
                         });
 
                         // Handle expressions (like ternary operators inside template literal)
@@ -107,41 +116,37 @@ function loader(source, inputSourceMap) {
                                 const alternate = exp.get('alternate');
 
                                 if (types.isStringLiteral(consequent.node)) {
-                                    const originalConsequent = consequent.node.value; // Capture the original className
+                                    const originalConsequent = consequent.node.value;
                                     const prefixedConsequent = prefixClassName(originalConsequent, prefix);
                                     consequent.replaceWith(types.stringLiteral(prefixedConsequent));
 
-                                    // Log the original and updated classNames
-                                    fs.appendFileSync(outputPath1, `Original template literal expression part={${originalConsequent}} => Updated part={${prefixedConsequent}}\n\n`);
+                                    // Log the change
+                                    logAlteration(originalConsequent, prefixedConsequent, enableDebugging);
                                 }
 
                                 if (types.isStringLiteral(alternate.node)) {
-                                    const originalAlternate = alternate.node.value; // Capture the original className
+                                    const originalAlternate = alternate.node.value;
                                     const prefixedAlternate = prefixClassName(originalAlternate, prefix);
                                     alternate.replaceWith(types.stringLiteral(prefixedAlternate));
 
-                                    // Log the original and updated classNames
-                                    fs.appendFileSync(outputPath1, `Original template literal expression part={${originalAlternate}} => Updated part={${prefixedAlternate}}\n\n`);
+                                    // Log the change
+                                    logAlteration(originalAlternate, prefixedAlternate, enableDebugging);
                                 }
                             }
                         });
-
-                        fs.appendFileSync(outputPath1, `Updated template literal className={${expression.toString()}}\n\n`);
                     }
                     // Handle classnames function calls (e.g., classnames('class1', {'class2': condition}))
                     else if (types.isCallExpression(expression.node) && expression.node.callee.name === 'classnames') {
                         expression.get('arguments').forEach(arg => {
                             if (types.isStringLiteral(arg.node)) {
-                                const originalValue = arg.node.value; // Capture the original className
+                                const originalValue = arg.node.value;
                                 const prefixedValue = prefixClassName(originalValue, prefix);
                                 arg.replaceWith(types.stringLiteral(prefixedValue));
 
-                                // Log the original and updated classNames
-                                fs.appendFileSync(outputPath1, `Original classnames argument={${originalValue}} => Updated argument={${prefixedValue}}\n\n`);
+                                // Log the change
+                                logAlteration(originalValue, prefixedValue, enableDebugging);
                             }
                         });
-
-                        fs.appendFileSync(outputPath1, `Updated classnames function call className={${expression.toString()}}\n\n`);
                     }
                 }
             }
