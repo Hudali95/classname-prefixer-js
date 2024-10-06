@@ -1,6 +1,6 @@
 {
   "name": "classname-prefixer-js-loader",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Used to dynamically prefix the classNames",
   "main": "index.js",
   "scripts": {
