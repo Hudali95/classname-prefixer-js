@@ -24,6 +24,30 @@ function logAlteration(original, updated, enableDebugging) {
     }
 }
 
+// Recursive function to handle deeply nested ternary expressions
+function handleTernaryExpression(expression, prefix, enableDebugging) {
+    const consequent = expression.get('consequent');
+    const alternate = expression.get('alternate');
+
+    if (types.isStringLiteral(consequent.node)) {
+        const originalConsequent = consequent.node.value;
+        const prefixedConsequent = prefixClassName(originalConsequent, prefix);
+        consequent.replaceWith(types.stringLiteral(prefixedConsequent));
+        logAlteration(originalConsequent, prefixedConsequent, enableDebugging);
+    } else if (types.isConditionalExpression(consequent.node)) {
+        handleTernaryExpression(consequent, prefix, enableDebugging); // Recursively handle nested ternary
+    }
+
+    if (types.isStringLiteral(alternate.node)) {
+        const originalAlternate = alternate.node.value;
+        const prefixedAlternate = prefixClassName(originalAlternate, prefix);
+        alternate.replaceWith(types.stringLiteral(prefixedAlternate));
+        logAlteration(originalAlternate, prefixedAlternate, enableDebugging);
+    } else if (types.isConditionalExpression(alternate.node)) {
+        handleTernaryExpression(alternate, prefix, enableDebugging); // Recursively handle nested ternary
+    }
+}
+
 function loader(source, inputSourceMap) {
     // Get the options passed from Webpack config
     const options = this.getOptions();
@@ -72,26 +96,7 @@ function loader(source, inputSourceMap) {
                     }
                     // Handle ternary expressions (e.g., {condition ? 'class1' : 'class2'})
                     else if (types.isConditionalExpression(expression.node)) {
-                        const consequent = expression.get('consequent');
-                        const alternate = expression.get('alternate');
-
-                        if (types.isStringLiteral(consequent.node)) {
-                            const originalConsequent = consequent.node.value;
-                            const prefixedConsequent = prefixClassName(originalConsequent, prefix);
-                            consequent.replaceWith(types.stringLiteral(prefixedConsequent));
-
-                            // Log the change
-                            logAlteration(originalConsequent, prefixedConsequent, enableDebugging);
-                        }
-
-                        if (types.isStringLiteral(alternate.node)) {
-                            const originalAlternate = alternate.node.value;
-                            const prefixedAlternate = prefixClassName(originalAlternate, prefix);
-                            alternate.replaceWith(types.stringLiteral(prefixedAlternate));
-
-                            // Log the change
-                            logAlteration(originalAlternate, prefixedAlternate, enableDebugging);
-                        }
+                        handleTernaryExpression(expression, prefix, enableDebugging);
                     }
                     // Handle template literals (e.g., `some-${variable}-class`)
                     else if (types.isTemplateLiteral(expression.node)) {
@@ -112,26 +117,7 @@ function loader(source, inputSourceMap) {
                         // Handle expressions (like ternary operators inside template literal)
                         expressions.forEach((exp) => {
                             if (types.isConditionalExpression(exp.node)) {
-                                const consequent = exp.get('consequent');
-                                const alternate = exp.get('alternate');
-
-                                if (types.isStringLiteral(consequent.node)) {
-                                    const originalConsequent = consequent.node.value;
-                                    const prefixedConsequent = prefixClassName(originalConsequent, prefix);
-                                    consequent.replaceWith(types.stringLiteral(prefixedConsequent));
-
-                                    // Log the change
-                                    logAlteration(originalConsequent, prefixedConsequent, enableDebugging);
-                                }
-
-                                if (types.isStringLiteral(alternate.node)) {
-                                    const originalAlternate = alternate.node.value;
-                                    const prefixedAlternate = prefixClassName(originalAlternate, prefix);
-                                    alternate.replaceWith(types.stringLiteral(prefixedAlternate));
-
-                                    // Log the change
-                                    logAlteration(originalAlternate, prefixedAlternate, enableDebugging);
-                                }
+                                handleTernaryExpression(exp, prefix, enableDebugging);
                             }
                         });
                     }
